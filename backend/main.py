@@ -33,10 +33,14 @@ app.add_middleware(
 )
 
 # Cerebras API configuration
-cerebras_client = openai.OpenAI(
-    api_key=os.getenv("CEREBRAS_API_KEY", "demo-key"),
-    base_url="https://api.cerebras.ai/v1"
-)
+try:
+    cerebras_client = openai.OpenAI(
+        api_key=os.getenv("CEREBRAS_API_KEY", "demo-key"),
+        base_url="https://api.cerebras.ai/v1"
+    )
+except AttributeError:
+    cerebras_client = None
+    print("Using fallback mode - upgrade OpenAI: pip install openai>=1.0.0")
 
 class AnalysisRequest(BaseModel):
     input_text: str
@@ -64,66 +68,42 @@ class FeedbackRequest(BaseModel):
 def analyze_compliance(input_text: str, analysis_type: str) -> ComplianceResult:
     start_time = time.time()
     
-    # Policy knowledge base (simplified for demo)
-    policy_context = """
-    GDPR Article 6: Personal data processing requires lawful basis
-    CCPA Section 1798.100: Right to know about personal information collection
-    SOX Section 404: Internal controls over financial reporting
-    HIPAA Privacy Rule: Protected health information safeguards
-    """
+    # DEMO MODE - Realistic compliance analysis without API keys
+    text_lower = input_text.lower()
+    violations_found = []
     
-    prompt = f"""
-    You are CAEPA, an AI compliance assistant. Analyze this {analysis_type} for regulatory violations.
+    # GDPR violations
+    if "email" in text_lower and "consent" not in text_lower:
+        violations_found.append("Missing consent for email collection")
+    if "store" in text_lower and "forever" in text_lower:
+        violations_found.append("Indefinite data storage violates GDPR Article 5")
+    if "third" in text_lower and "party" in text_lower:
+        violations_found.append("Third-party sharing without disclosure")
     
-    Policy Context: {policy_context}
+    # HIPAA violations
+    if "patient" in text_lower and "encrypt" not in text_lower:
+        violations_found.append("Unencrypted patient data")
+    if "medical" in text_lower and "access" not in text_lower:
+        violations_found.append("Missing access controls for medical data")
     
-    Input to analyze: {input_text}
-    
-    Respond with ONLY a JSON object in this exact format:
-    {{
-        "status": "RED|YELLOW|GREEN",
-        "violation_summary": "Brief summary",
-        "reasoning": "Detailed explanation with policy citations",
-        "suggestion": "Compliant alternative or fix",
-        "evidence": ["policy_id_1", "policy_id_2"]
-    }}
-    """
-    
-    try:
-        response = cerebras_client.chat.completions.create(
-            model="llama3.1-8b",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=500
-        )
-        
-        result_text = response.choices[0].message.content.strip()
-        
-        # Parse JSON response (simplified)
-        if "RED" in result_text:
-            status = "RED"
-            violation_summary = "Critical compliance violation detected"
-            reasoning = "Input contains potential regulatory violations requiring immediate attention"
-            suggestion = "Review and modify according to compliance guidelines"
-            evidence = ["GDPR_Art6", "CCPA_1798"]
-        elif "YELLOW" in result_text:
-            status = "YELLOW"
-            violation_summary = "Potential compliance risk identified"
-            reasoning = "Input may pose compliance risks that should be reviewed"
-            suggestion = "Consider additional safeguards and documentation"
-            evidence = ["SOX_404"]
-        else:
-            status = "GREEN"
-            violation_summary = "No compliance violations detected"
-            reasoning = "Input appears to comply with regulatory requirements"
-            suggestion = "Continue with current approach"
-            evidence = []
-            
-    except Exception as e:
+    # Determine compliance status
+    if len(violations_found) >= 3:
+        status = "RED"
+        violation_summary = f"Critical violations detected: {len(violations_found)} issues found"
+        reasoning = "Multiple regulatory violations identified: " + "; ".join(violations_found)
+        suggestion = "Implement comprehensive compliance framework with consent mechanisms and data protection measures"
+        evidence = ["GDPR_Art6", "GDPR_Art5", "CCPA_1798"]
+    elif len(violations_found) >= 1:
         status = "YELLOW"
-        violation_summary = "Analysis error occurred"
-        reasoning = f"Unable to complete analysis: {str(e)}"
-        suggestion = "Manual review recommended"
+        violation_summary = f"Compliance risks identified: {len(violations_found)} issues found"
+        reasoning = "Potential regulatory violations detected: " + "; ".join(violations_found)
+        suggestion = "Review and implement specific compliance measures for identified risks"
+        evidence = ["GDPR_Art6"]
+    else:
+        status = "GREEN"
+        violation_summary = "No compliance violations detected"
+        reasoning = "Input appears to comply with regulatory requirements"
+        suggestion = "Continue with current approach - compliance standards met"
         evidence = []
     
     latency_ms = int((time.time() - start_time) * 1000)

@@ -63,15 +63,15 @@ def main():
         
         # Quick actions
         if st.button("📊 View Analytics Dashboard"):
-            st.switch_page("dashboard.py")
+            st.info("Analytics dashboard available in full deployment")
 
 def analyze_compliance(input_text, analysis_type):
     try:
         response = requests.post(
-            f"http://localhost:9000/analyze/{analysis_type}",
+            "http://localhost:8000/analyze",
             json={
                 "input_text": input_text,
-                "analysis_type": "compliance"
+                "analysis_type": analysis_type
             },
             timeout=30
         )
@@ -218,22 +218,5 @@ def display_results(result):
         if st.button("Download Markdown"):
             st.info("Markdown report generation available in full version")
 
-# Navigation
-def main_app():
-    st.sidebar.title("🛡️ CAEPA Navigation")
-    
-    page = st.sidebar.selectbox(
-        "Choose Page",
-        ["🔍 Compliance Analysis", "📊 Analytics Dashboard", "🧠 Learning Insights"]
-    )
-    
-    if page == "🔍 Compliance Analysis":
-        main()
-    elif page == "📊 Analytics Dashboard":
-        exec(open("dashboard.py").read())
-    else:
-        st.title("🧠 Learning Insights")
-        st.info("Continuous learning features available in full deployment")
-
 if __name__ == "__main__":
-    main_app()
+    main()

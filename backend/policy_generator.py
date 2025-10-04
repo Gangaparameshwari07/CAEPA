@@ -4,10 +4,15 @@ from typing import Dict, List
 
 class ProactivePolicyGenerator:
     def __init__(self):
-        self.cerebras_client = openai.OpenAI(
-            api_key=os.getenv("CEREBRAS_API_KEY", "demo-key"),
-            base_url="https://api.cerebras.ai/v1"
-        )
+        try:
+            self.cerebras_client = openai.OpenAI(
+                api_key=os.getenv("CEREBRAS_API_KEY", "demo-key"),
+                base_url="https://api.cerebras.ai/v1"
+            )
+        except AttributeError:
+            # Fallback for older OpenAI versions
+            self.cerebras_client = None
+            print("Using fallback mode - upgrade OpenAI: pip install openai>=1.0.0")
 
     def generate_compliant_policy(self, violation_text: str, domain: str) -> Dict:
         """Generate corrected policy text using Llama 3 via Cerebras"""
@@ -57,14 +62,17 @@ class ProactivePolicyGenerator:
         """
 
         try:
-            response = self.cerebras_client.chat.completions.create(
-                model="llama3.1-8b",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.2,
-                max_tokens=400
-            )
-            
-            generated_policy = response.choices[0].message.content.strip()
+            if self.cerebras_client:
+                response = self.cerebras_client.chat.completions.create(
+                    model="llama3.1-8b",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.2,
+                    max_tokens=400
+                )
+                generated_policy = response.choices[0].message.content.strip()
+            else:
+                # Fallback mode
+                generated_policy = self.generate_fallback_policy(violation_text, domain)["generated_policy"]
             
             return {
                 "original_text": violation_text,
