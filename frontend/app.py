@@ -19,9 +19,9 @@ def main():
         st.markdown("### Input Analysis")
         
         analysis_type = st.selectbox(
-            "Analysis Type",
-            ["code", "policy", "document"],
-            help="Select the type of content to analyze"
+            "Compliance Domain",
+            ["general", "gdpr", "hipaa", "sox"],
+            help="Select regulatory domain for specialized analysis"
         )
         
         input_text = st.text_area(
@@ -60,10 +60,10 @@ def main():
 def analyze_compliance(input_text, analysis_type):
     try:
         response = requests.post(
-            "http://localhost:8000/analyze",
+            f"http://localhost:9000/analyze/{analysis_type}",
             json={
                 "input_text": input_text,
-                "analysis_type": analysis_type
+                "analysis_type": "compliance"
             },
             timeout=30
         )

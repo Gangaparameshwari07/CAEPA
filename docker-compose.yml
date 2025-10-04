@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  mcp-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    ports:
+      - "9000:9000"
+    networks:
+      - caepa-network
+    depends_on:
+      - backend
+      - gdpr-service
+      - hipaa-service
+
   backend:
     build:
       context: .
@@ -12,6 +25,30 @@ services:
     networks:
       - caepa-network
 
+  gdpr-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8001:8000"
+    environment:
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+      - COMPLIANCE_DOMAIN=GDPR
+    networks:
+      - caepa-network
+
+  hipaa-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8002:8000"
+    environment:
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+      - COMPLIANCE_DOMAIN=HIPAA
+    networks:
+      - caepa-network
+
   frontend:
     build:
       context: .
@@ -19,7 +56,7 @@ services:
     ports:
       - "8501:8501"
     depends_on:
-      - backend
+      - mcp-gateway
     networks:
       - caepa-network
 
