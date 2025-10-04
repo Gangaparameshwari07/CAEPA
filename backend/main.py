@@ -1,14 +1,22 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import openai
 import time
 import os
 from dotenv import load_dotenv
+from report_generator import ComplianceReportGenerator
+from explainability import ExplainabilityEngine
+from analytics import ComplianceAnalytics
 
 load_dotenv()
 
 app = FastAPI(title="CAEPA - Context-Aware Ethical Policy Assistant")
+
+# Initialize components
+report_generator = ComplianceReportGenerator()
+explainability_engine = ExplainabilityEngine()
+analytics = ComplianceAnalytics()
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +43,13 @@ class ComplianceResult(BaseModel):
     suggestion: str
     evidence: list
     latency_ms: int
+    reasoning_chain: list = []
+    confidence_score: float = 0.0
+    cross_domain_conflicts: list = []
+
+class FeedbackRequest(BaseModel):
+    analysis_id: int
+    feedback: str  # "correct" or "incorrect"
 
 def analyze_compliance(input_text: str, analysis_type: str) -> ComplianceResult:
     start_time = time.time()
@@ -124,9 +139,91 @@ def analyze_input(request: AnalysisRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/analyze", response_model=ComplianceResult)
+def analyze_input_enhanced(request: AnalysisRequest):
+    try:
+        result = analyze_compliance(request.input_text, request.analysis_type)
+        
+        # Add explainability
+        reasoning_chain = explainability_engine.generate_reasoning_chain(
+            request.input_text, request.analysis_type, result.__dict__
+        )
+        confidence_score = explainability_engine.generate_confidence_score(reasoning_chain)
+        
+        # Check cross-domain conflicts
+        cross_domain_conflicts = check_cross_domain_conflicts(request.input_text)
+        
+        # Save to analytics
+        analytics.save_analysis(result.__dict__, request.input_text, request.analysis_type)
+        
+        result.reasoning_chain = reasoning_chain
+        result.confidence_score = confidence_score
+        result.cross_domain_conflicts = cross_domain_conflicts
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/dashboard")
+def get_dashboard_data():
+    return analytics.get_risk_dashboard_data()
+
+@app.post("/feedback")
+def submit_feedback(feedback: FeedbackRequest):
+    analytics.add_feedback(feedback.analysis_id, feedback.feedback)
+    return {"message": "Feedback recorded for continuous learning"}
+
+@app.get("/report/{format}")
+def download_report(format: str, input_text: str, domain: str, analysis_result: str):
+    import json
+    result = json.loads(analysis_result)
+    
+    if format == "pdf":
+        pdf_content = report_generator.generate_pdf_report(result, input_text, domain)
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=compliance_report.pdf"}
+        )
+    elif format == "markdown":
+        md_content = report_generator.generate_markdown_report(result, input_text, domain)
+        return Response(
+            content=md_content,
+            media_type="text/markdown",
+            headers={"Content-Disposition": "attachment; filename=compliance_report.md"}
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Format must be 'pdf' or 'markdown'")
+
+@app.get("/learning-insights")
+def get_learning_insights():
+    return analytics.get_learning_insights()
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "CAEPA Backend"}
+
+def check_cross_domain_conflicts(input_text: str) -> list:
+    conflicts = []
+    
+    # Mock cross-domain conflict detection
+    if "store indefinitely" in input_text.lower():
+        conflicts.append({
+            "conflict": "Data retention conflict",
+            "gdpr": "Violates Right to Erasure (Article 17)",
+            "ccpa": "Requires disclosure of retention period",
+            "severity": "high"
+        })
+    
+    if "collect ip address" in input_text.lower():
+        conflicts.append({
+            "conflict": "Personal data classification",
+            "gdpr": "IP address is personal data",
+            "ccpa": "May require opt-out mechanism",
+            "severity": "medium"
+        })
+    
+    return conflicts
 
 if __name__ == "__main__":
     import uvicorn

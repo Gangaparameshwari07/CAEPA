@@ -43,19 +43,23 @@ def main():
         **Powered by:**
         - 🧠 Meta Llama for reasoning
         - ⚡ Cerebras for speed
-        - 🐳 Docker for deployment
+        - 🐳 Docker MCP Gateway
         
-        **Checks for:**
-        - GDPR compliance
-        - CCPA requirements  
-        - SOX regulations
-        - HIPAA privacy rules
+        **Enterprise Features:**
+        - Cross-domain conflict detection
+        - Explainable AI reasoning
+        - Continuous learning
+        - Audit-ready reports
         """)
         
         st.markdown("### Status Legend")
         st.markdown("🟢 **GREEN** - Compliant")
         st.markdown("🟡 **YELLOW** - Risk detected")
         st.markdown("🔴 **RED** - Violation found")
+        
+        # Quick actions
+        if st.button("📊 View Analytics Dashboard"):
+            st.switch_page("dashboard.py")
 
 def analyze_compliance(input_text, analysis_type):
     try:
@@ -111,11 +115,30 @@ def display_results(result):
     with col1:
         st.markdown(f"**Summary:** {result['violation_summary']}")
         
-        with st.expander("📋 Detailed Reasoning", expanded=True):
+        # Explainability Chain
+        if result.get("reasoning_chain"):
+            with st.expander("🔍 AI Reasoning Chain", expanded=True):
+                for step in result["reasoning_chain"]:
+                    st.write(f"**Step {step['step']}: {step['action']}**")
+                    st.write(f"Finding: {step['finding']}")
+                    if step.get('confidence'):
+                        st.progress(step['confidence'])
+                    st.write("---")
+        
+        with st.expander("📋 Detailed Reasoning"):
             st.write(result["reasoning"])
         
-        with st.expander("💡 Suggested Fix", expanded=True):
+        with st.expander("💡 Suggested Fix"):
             st.write(result["suggestion"])
+        
+        # Cross-domain conflicts
+        if result.get("cross_domain_conflicts"):
+            with st.expander("⚖️ Cross-Domain Conflicts", expanded=True):
+                for conflict in result["cross_domain_conflicts"]:
+                    st.warning(f"**{conflict['conflict']}**")
+                    st.write(f"GDPR: {conflict['gdpr']}")
+                    st.write(f"CCPA: {conflict['ccpa']}")
+                    st.write(f"Severity: {conflict['severity'].upper()}")
         
         if result["evidence"]:
             with st.expander("📚 Policy Evidence"):
@@ -124,7 +147,33 @@ def display_results(result):
     
     with col2:
         st.metric("Response Time", f"{result['latency_ms']}ms")
+        if result.get("confidence_score"):
+            st.metric("Confidence", f"{result['confidence_score']:.0%}")
         st.markdown(f"**Status:** :{status_color}[{status}]")
+        
+        # Report download buttons
+        st.markdown("### 📄 Export Report")
+        if st.button("Download PDF"):
+            st.info("PDF report generation available in full version")
+        if st.button("Download Markdown"):
+            st.info("Markdown report generation available in full version")
+
+# Navigation
+def main_app():
+    st.sidebar.title("🛡️ CAEPA Navigation")
+    
+    page = st.sidebar.selectbox(
+        "Choose Page",
+        ["🔍 Compliance Analysis", "📊 Analytics Dashboard", "🧠 Learning Insights"]
+    )
+    
+    if page == "🔍 Compliance Analysis":
+        main()
+    elif page == "📊 Analytics Dashboard":
+        exec(open("dashboard.py").read())
+    else:
+        st.title("🧠 Learning Insights")
+        st.info("Continuous learning features available in full deployment")
 
 if __name__ == "__main__":
-    main()
+    main_app()
