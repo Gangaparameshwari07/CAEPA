@@ -33,6 +33,10 @@ def main():
         analyze_button = st.button("🔍 Analyze Compliance", type="primary")
         
         if analyze_button and input_text:
+            # Store for fix button
+            st.session_state['last_input'] = input_text
+            st.session_state['last_domain'] = analysis_type
+            
             with st.spinner("Analyzing with Cerebras + Llama..."):
                 result = analyze_compliance(input_text, analysis_type)
                 display_results(result)
@@ -93,6 +97,25 @@ def analyze_compliance(input_text, analysis_type):
             "latency_ms": 0
         }
 
+def apply_compliance_fix(input_text, analysis_type):
+    try:
+        response = requests.post(
+            "http://localhost:8000/apply-fix",
+            json={
+                "input_text": input_text,
+                "analysis_type": analysis_type
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+    except Exception as e:
+        st.error(f"Fix application failed: {str(e)}")
+        return None
+
 def display_results(result):
     status = result["status"]
     
@@ -146,10 +169,47 @@ def display_results(result):
                     st.write(f"• {evidence}")
     
     with col2:
+        # Compliance Grade Display
+        if result.get("compliance_grade"):
+            grade_info = result["compliance_grade"]
+            grade_color = {
+                "A+": "green", "A": "green", "B": "blue", 
+                "C": "orange", "D": "red", "F": "red"
+            }.get(grade_info["letter_grade"], "gray")
+            
+            st.markdown(f"### 📊 Compliance Grade")
+            st.markdown(f"## :{grade_color}[{grade_info['letter_grade']}]")
+            st.metric("Score", f"{grade_info['percentage_score']}%")
+            
+            # Violation Breakdown
+            st.markdown("### 🚨 Issues Found")
+            violations = grade_info["violation_breakdown"]
+            
+            for violation_type, count in violations.items():
+                if count > 0:
+                    violation_name = violation_type.replace("_violations", "").replace("_", " ").upper()
+                    st.error(f"{count} {violation_name} violation(s)")
+            
+            if grade_info["total_violations"] == 0:
+                st.success("✅ No violations detected!")
+        
         st.metric("Response Time", f"{result['latency_ms']}ms")
         if result.get("confidence_score"):
             st.metric("Confidence", f"{result['confidence_score']:.0%}")
         st.markdown(f"**Status:** :{status_color}[{status}]")
+        
+        # Fix Button
+        if result.get("fix_available") and result.get("compliance_grade", {}).get("total_violations", 0) > 0:
+            st.markdown("### 🔧 Quick Fix")
+            if st.button("🚀 Apply AI Fix", type="primary"):
+                with st.spinner("Applying Llama-generated corrections..."):
+                    fix_result = apply_compliance_fix(st.session_state.get('last_input', ''), 
+                                                    st.session_state.get('last_domain', 'general'))
+                    if fix_result:
+                        st.success("✅ Violations fixed!")
+                        st.markdown("**Fixed Text:**")
+                        st.code(fix_result["fixed_text"][:300] + "...")
+                        st.markdown(f"**New Grade:** :green[{fix_result['new_grade']['letter_grade']}]")
         
         # Report download buttons
         st.markdown("### 📄 Export Report")

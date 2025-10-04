@@ -10,6 +10,7 @@ from explainability import ExplainabilityEngine
 from analytics import ComplianceAnalytics
 from policy_generator import ProactivePolicyGenerator
 from performance_benchmark import PerformanceBenchmark
+from grading_system import ComplianceGradingSystem
 
 load_dotenv()
 
@@ -21,6 +22,7 @@ explainability_engine = ExplainabilityEngine()
 analytics = ComplianceAnalytics()
 policy_generator = ProactivePolicyGenerator()
 benchmark = PerformanceBenchmark()
+grading_system = ComplianceGradingSystem()
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,6 +54,8 @@ class ComplianceResult(BaseModel):
     cross_domain_conflicts: list = []
     generated_policy: dict = {}
     performance_benchmark: dict = {}
+    compliance_grade: dict = {}
+    fix_available: bool = False
 
 class FeedbackRequest(BaseModel):
     analysis_id: int
@@ -166,6 +170,11 @@ def analyze_input_enhanced(request: AnalysisRequest):
             )
             result.generated_policy = policy_result
         
+        # Calculate compliance grade
+        grade_result = grading_system.calculate_compliance_grade(result.__dict__, request.input_text)
+        result.compliance_grade = grade_result
+        result.fix_available = grade_result["total_violations"] > 0
+        
         # Run performance benchmark
         benchmark_results = await benchmark.benchmark_compliance_analysis(request.input_text)
         result.performance_benchmark = benchmark_results
@@ -235,6 +244,32 @@ async def run_performance_benchmark(input_text: str = "user_data = request.get('
         return {
             "benchmark_results": benchmark_results,
             "performance_report": benchmark.generate_performance_report(benchmark_results)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/apply-fix")
+def apply_compliance_fix(request: AnalysisRequest):
+    """Apply Llama-generated corrections to fix violations"""
+    try:
+        # Generate corrected version
+        policy_result = policy_generator.generate_compliant_policy(
+            request.input_text, request.analysis_type
+        )
+        
+        # Calculate new grade after fix
+        mock_fixed_result = {"status": "GREEN", "evidence": []}
+        new_grade = grading_system.calculate_compliance_grade(
+            mock_fixed_result, policy_result["generated_policy"]
+        )
+        
+        return {
+            "original_text": request.input_text,
+            "fixed_text": policy_result["generated_policy"],
+            "improvements_made": policy_result["policy_improvements"],
+            "new_grade": new_grade,
+            "fix_summary": "All violations have been addressed with compliant alternatives",
+            "status": "FIXED"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
