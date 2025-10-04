@@ -1,19 +1,31 @@
 version: '3.8'
 
+# 🛡️ CAEPA - Enterprise Compliance Platform
+# Complete containerized deployment with MCP Gateway compliance firewall
+
 services:
+  # 🚪 MCP Gateway - Compliance Firewall & Router
   mcp-gateway:
     build:
       context: .
       dockerfile: docker/Dockerfile.gateway
     ports:
       - "9000:9000"
+    environment:
+      - COMPLIANCE_FIREWALL=ACTIVE
+      - AUDIT_LOGGING=ENABLED
+    volumes:
+      - ./logs:/app/logs
     networks:
       - caepa-network
     depends_on:
       - backend
       - gdpr-service
       - hipaa-service
+      - sox-service
+    restart: unless-stopped
 
+  # 🧠 Main Backend - General Compliance Analysis
   backend:
     build:
       context: .
@@ -22,9 +34,15 @@ services:
       - "8000:8000"
     environment:
       - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SERVICE_NAME=general-compliance
+    volumes:
+      - ./data:/app/data
     networks:
       - caepa-network
+    restart: unless-stopped
 
+  # 🇪🇺 GDPR Specialist Service
   gdpr-service:
     build:
       context: .
@@ -34,9 +52,12 @@ services:
     environment:
       - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
       - COMPLIANCE_DOMAIN=GDPR
+      - SERVICE_NAME=gdpr-specialist
     networks:
       - caepa-network
+    restart: unless-stopped
 
+  # 🏥 HIPAA Healthcare Service
   hipaa-service:
     build:
       context: .
@@ -46,20 +67,68 @@ services:
     environment:
       - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
       - COMPLIANCE_DOMAIN=HIPAA
+      - SERVICE_NAME=hipaa-specialist
     networks:
       - caepa-network
+    restart: unless-stopped
 
+  # 💰 SOX Financial Service
+  sox-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8003:8000"
+    environment:
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+      - COMPLIANCE_DOMAIN=SOX
+      - SERVICE_NAME=sox-specialist
+    networks:
+      - caepa-network
+    restart: unless-stopped
+
+  # 🖥️ Frontend Dashboard
   frontend:
     build:
       context: .
       dockerfile: docker/Dockerfile.frontend
     ports:
       - "8501:8501"
+    environment:
+      - MCP_GATEWAY_URL=http://mcp-gateway:9000
+      - BACKEND_URL=http://backend:8000
     depends_on:
       - mcp-gateway
     networks:
       - caepa-network
+    restart: unless-stopped
+
+  # 📊 Analytics Service
+  analytics:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8004:8000"
+    environment:
+      - SERVICE_NAME=analytics-engine
+    volumes:
+      - ./analytics:/app/analytics
+    networks:
+      - caepa-network
+    restart: unless-stopped
+
+volumes:
+  logs:
+    driver: local
+  data:
+    driver: local
+  analytics:
+    driver: local
 
 networks:
   caepa-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

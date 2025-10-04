@@ -3,8 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import os
 from typing import Dict
+from compliance_interceptor import ComplianceInterceptor
 
-app = FastAPI(title="CAEPA MCP Gateway")
+app = FastAPI(title="CAEPA MCP Gateway - Enterprise Compliance Firewall")
+
+# Initialize compliance interceptor
+interceptor = ComplianceInterceptor()
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,8 +42,26 @@ async def route_analysis(domain: str, request: Request):
             detail=f"Domain '{domain}' not supported. Available: {list(SERVICE_ROUTES.keys())}"
         )
     
-    target_url = SERVICE_ROUTES[domain]
     request_body = await request.json()
+    
+    # 🛡️ COMPLIANCE INTERCEPTOR - Real-time regulatory firewall
+    compliance_check = interceptor.intercept_request(request_body)
+    
+    if compliance_check["blocked"]:
+        # Request blocked by compliance firewall
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "Compliance Violation Detected",
+                "message": compliance_check["message"],
+                "violations": compliance_check["violations"],
+                "audit_id": compliance_check["audit_id"],
+                "firewall_status": "BLOCKED"
+            }
+        )
+    
+    # Request approved - proceed to service
+    target_url = SERVICE_ROUTES[domain]
     
     async with httpx.AsyncClient() as client:
         try:
@@ -52,6 +74,8 @@ async def route_analysis(domain: str, request: Request):
             result = response.json()
             result["routed_via"] = f"MCP Gateway -> {domain} service"
             result["service_endpoint"] = target_url
+            result["compliance_audit_id"] = compliance_check["audit_id"]
+            result["firewall_status"] = "APPROVED"
             
             return result
             
@@ -61,9 +85,25 @@ async def route_analysis(domain: str, request: Request):
                 detail=f"Service {domain} unavailable: {str(e)}"
             )
 
+@app.get("/audit-trail")
+def get_audit_trail():
+    return {
+        "audit_trail": interceptor.get_audit_trail(),
+        "compliance_report": interceptor.generate_compliance_report()
+    }
+
+@app.get("/compliance-stats")
+def get_compliance_stats():
+    return interceptor.generate_compliance_report()
+
 @app.get("/health")
 def gateway_health():
-    return {"status": "healthy", "gateway": "MCP routing active"}
+    return {
+        "status": "healthy", 
+        "gateway": "MCP routing active",
+        "compliance_firewall": "ACTIVE",
+        "interceptor_status": "MONITORING"
+    }
 
 if __name__ == "__main__":
     import uvicorn

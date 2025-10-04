@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from report_generator import ComplianceReportGenerator
 from explainability import ExplainabilityEngine
 from analytics import ComplianceAnalytics
+from policy_generator import ProactivePolicyGenerator
+from performance_benchmark import PerformanceBenchmark
 
 load_dotenv()
 
@@ -17,6 +19,8 @@ app = FastAPI(title="CAEPA - Context-Aware Ethical Policy Assistant")
 report_generator = ComplianceReportGenerator()
 explainability_engine = ExplainabilityEngine()
 analytics = ComplianceAnalytics()
+policy_generator = ProactivePolicyGenerator()
+benchmark = PerformanceBenchmark()
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +50,8 @@ class ComplianceResult(BaseModel):
     reasoning_chain: list = []
     confidence_score: float = 0.0
     cross_domain_conflicts: list = []
+    generated_policy: dict = {}
+    performance_benchmark: dict = {}
 
 class FeedbackRequest(BaseModel):
     analysis_id: int
@@ -153,6 +159,17 @@ def analyze_input_enhanced(request: AnalysisRequest):
         # Check cross-domain conflicts
         cross_domain_conflicts = check_cross_domain_conflicts(request.input_text)
         
+        # Generate compliant policy if violation detected
+        if result.status in ["RED", "YELLOW"]:
+            policy_result = policy_generator.generate_compliant_policy(
+                request.input_text, request.analysis_type
+            )
+            result.generated_policy = policy_result
+        
+        # Run performance benchmark
+        benchmark_results = await benchmark.benchmark_compliance_analysis(request.input_text)
+        result.performance_benchmark = benchmark_results
+        
         # Save to analytics
         analytics.save_analysis(result.__dict__, request.input_text, request.analysis_type)
         
@@ -198,6 +215,29 @@ def download_report(format: str, input_text: str, domain: str, analysis_result: 
 @app.get("/learning-insights")
 def get_learning_insights():
     return analytics.get_learning_insights()
+
+@app.post("/generate-policy")
+def generate_compliant_policy(request: AnalysisRequest):
+    """Generate corrected policy using Llama 3 via Cerebras"""
+    try:
+        policy_result = policy_generator.generate_compliant_policy(
+            request.input_text, request.analysis_type
+        )
+        return policy_result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/performance-benchmark")
+async def run_performance_benchmark(input_text: str = "user_data = request.get('email')"):
+    """Demonstrate Cerebras speed advantage"""
+    try:
+        benchmark_results = await benchmark.benchmark_compliance_analysis(input_text)
+        return {
+            "benchmark_results": benchmark_results,
+            "performance_report": benchmark.generate_performance_report(benchmark_results)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 def health_check():
