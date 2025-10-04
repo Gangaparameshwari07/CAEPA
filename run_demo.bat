@@ -2,8 +2,16 @@
 echo 🛡️ CAEPA - Starting Hackathon Demo
 echo ================================
 
+:: Change to CAEPA directory
+cd /d "%~dp0"
+
 echo 📦 Installing dependencies...
-pip install -r requirements.txt
+if exist requirements.txt (
+    pip install -r requirements.txt
+) else (
+    echo Installing basic dependencies...
+    pip install fastapi uvicorn streamlit requests plotly pandas
+)
 
 echo 🚀 Starting CAEPA services...
 

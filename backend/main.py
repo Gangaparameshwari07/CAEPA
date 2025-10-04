@@ -150,7 +150,7 @@ def analyze_input(request: AnalysisRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/analyze", response_model=ComplianceResult)
-def analyze_input_enhanced(request: AnalysisRequest):
+async def analyze_input_enhanced(request: AnalysisRequest):
     try:
         result = analyze_compliance(request.input_text, request.analysis_type)
         
