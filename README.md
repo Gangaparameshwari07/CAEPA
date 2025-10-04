@@ -24,8 +24,11 @@ Real-time AI compliance assistant that scans code, policies, and documents for r
 
 ### Option 1: Docker Deployment
 ```bash
-# Set your Cerebras API key
-echo "CEREBRAS_API_KEY=your_key_here" > .env
+# Copy environment template
+cp .env.example .env
+
+# Edit .env with your actual API keys
+# CEREBRAS_API_KEY=your_actual_key_here
 
 # Launch services
 docker-compose up --build
