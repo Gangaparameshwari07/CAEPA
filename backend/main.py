@@ -39,7 +39,7 @@ class ComplianceResult(BaseModel):
     evidence: list
     latency_ms: int
     compliance_grade: dict = {}
-    fix_available: bool = False
+
     reasoning_chain: list = []
     confidence_score: float = 0.0
 
@@ -145,7 +145,6 @@ async def analyze_input(request: AnalysisRequest):
         # Add grading
         grade_result = grading_system.calculate_compliance_grade(result.__dict__, request.input_text)
         result.compliance_grade = grade_result
-        result.fix_available = grade_result["total_violations"] > 0
         
         # Add AI metadata
         result.reasoning_chain = [{"step": 1, "action": "Cerebras+Llama Analysis", "finding": "Real AI compliance analysis completed", "confidence": 0.9}]
@@ -157,40 +156,7 @@ async def analyze_input(request: AnalysisRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@app.post("/apply-fix")
-def apply_compliance_fix(request: AnalysisRequest):
-    """Generate AI-powered compliance fixes using Cerebras + Llama"""
-    if not request.input_text or len(request.input_text.strip()) < 5:
-        raise HTTPException(status_code=400, detail="Input text is required for fix generation")
-    
-    try:
-        prompt = f"""
-        You are CAEPA's policy generator. The following code has compliance violations:
-        
-        {request.input_text}
-        
-        Generate a compliant version that fixes all GDPR, HIPAA, and SOX violations.
-        Provide the corrected code with proper consent mechanisms, data protection, and compliance measures.
-        """
-        
-        response = cerebras_client.chat.completions.create(
-            model="llama3.1-8b",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            max_tokens=600
-        )
-        
-        fixed_text = response.choices[0].message.content.strip()
-        
-        return {
-            "original_text": request.input_text,
-            "fixed_text": fixed_text,
-            "improvements_made": ["Added consent mechanisms", "Implemented data protection", "Fixed retention policies"],
-            "new_grade": {"letter_grade": "A+", "percentage_score": 95.0},
-            "status": "FIXED"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Fix generation failed: {str(e)}")
+
 
 @app.get("/dashboard")
 def get_dashboard_data():

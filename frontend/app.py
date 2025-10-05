@@ -253,62 +253,7 @@ def display_results(result):
             st.metric("Confidence", f"{result['confidence_score']:.0%}")
         st.markdown(f"**Status:** :{status_color}[{status}]")
         
-        # AI-Powered Fix Suggestions
-        if result.get("fix_available"):
-            st.markdown("### 💡 AI-Powered Fix Suggestions")
-            if st.button("🤖 Apply AI Fix", type="primary"):
-                with st.spinner("Generating AI-powered compliance fix..."):
-                    input_text = st.session_state.get('last_input', '')
-                    analysis_type = st.session_state.get('last_domain', 'gdpr')
-                    
-                    # Call the actual fix endpoint
-                    try:
-                        fix_response = requests.post(
-                            "http://localhost:8000/apply-fix",
-                            json={
-                                "input_text": input_text,
-                                "analysis_type": analysis_type
-                            },
-                            timeout=30,
-                            headers={"Content-Type": "application/json"}
-                        )
-                        
-                        if fix_response.status_code == 200:
-                            fix_result = fix_response.json()
-                            
-                            st.markdown("**🎓 Llama 3.1 Generated Fix:**")
-                            
-                            # Show before/after
-                            col1, col2 = st.columns(2)
-                            
-                            with col1:
-                                st.markdown("#### 🔴 Original (Problematic)")
-                                st.code(fix_result.get('original_text', input_text)[:300] + "...", language="python")
-                            
-                            with col2:
-                                st.markdown("#### ✅ AI-Fixed (Compliant)")
-                                st.code(fix_result.get('fixed_text', 'Fix generated')[:300] + "...", language="python")
-                            
-                            # Show improvements
-                            st.markdown("#### 🛠️ Improvements Made:")
-                            for improvement in fix_result.get('improvements_made', []):
-                                st.success(f"✅ {improvement}")
-                            
-                            # Show new grade
-                            new_grade = fix_result.get('new_grade', {})
-                            if new_grade:
-                                st.markdown("#### 🎆 Result:")
-                                st.success(f"🎓 **Grade Improvement:** {result.get('compliance_grade', {}).get('letter_grade', 'F')} → {new_grade.get('letter_grade', 'A+')}")
-                                st.success(f"📊 **New Score:** {new_grade.get('percentage_score', 95)}%")
-                                st.success("✅ **Status:** Fully compliant with all regulations")
-                        
-                        else:
-                            st.error(f"Fix generation failed: {fix_response.status_code}")
-                    
-                    except requests.exceptions.RequestException as e:
-                        st.error(f"Failed to connect to fix service: {str(e)}")
-                    except Exception as e:
-                        st.error(f"Unexpected error during fix generation: {str(e)}")
+
         
         # Report download buttons
         st.markdown("### 📄 Export Report")

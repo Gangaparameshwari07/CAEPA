@@ -53,8 +53,8 @@ echo.
 echo 🎯 Demo Flow:
 echo 1. Paste problematic code
 echo 2. See Grade F with violations
-echo 3. Click "Get Fix Suggestions"
-echo 4. Watch grade improve to A+
+echo 3. Review detailed compliance analysis
+echo 4. See specific violation recommendations
 echo.
 echo Press any key to open CAEPA dashboard...
 pause >nul
