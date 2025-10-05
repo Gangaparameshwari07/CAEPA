@@ -109,7 +109,7 @@ def main():
         # Quick actions
         if st.button("📊 View Analytics Dashboard"):
             try:
-                response = requests.get("http://localhost:8000/dashboard", timeout=5)
+                response = requests.get("http://localhost:8001/dashboard", timeout=5)
                 if response.status_code == 200:
                     data = response.json()
                     st.success("Analytics Dashboard Data:")
@@ -124,7 +124,7 @@ def main():
 def analyze_compliance(input_text, analysis_type):
     try:
         response = requests.post(
-            "http://localhost:8000/analyze",
+            "http://localhost:8001/analyze",
             json={
                 "input_text": input_text,
                 "analysis_type": analysis_type
