@@ -46,6 +46,16 @@ class ComplianceResult(BaseModel):
 def analyze_compliance(input_text: str, analysis_type: str) -> ComplianceResult:
     start_time = time.time()
     
+    if not input_text or len(input_text.strip()) < 10:
+        return ComplianceResult(
+            status="YELLOW",
+            violation_summary="Insufficient input",
+            reasoning="Input text too short for meaningful analysis",
+            suggestion="Provide more detailed content for analysis",
+            evidence=[],
+            latency_ms=0
+        )
+    
     policy_context = """
     GDPR Article 6: Personal data processing requires lawful basis
     GDPR Article 5: Data minimization and retention principles
@@ -72,12 +82,22 @@ def analyze_compliance(input_text: str, analysis_type: str) -> ComplianceResult:
     Format as structured analysis with clear violation identification.
     """
     
-    response = cerebras_client.chat.completions.create(
-        model="llama3.1-8b",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1,
-        max_tokens=800
-    )
+    try:
+        response = cerebras_client.chat.completions.create(
+            model="llama3.1-8b",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=800
+        )
+    except Exception as api_error:
+        return ComplianceResult(
+            status="YELLOW",
+            violation_summary="API Error",
+            reasoning=f"Failed to connect to Cerebras API: {str(api_error)}",
+            suggestion="Check API key and network connection",
+            evidence=[],
+            latency_ms=int((time.time() - start_time) * 1000)
+        )
     
     result_text = response.choices[0].message.content.strip()
     
@@ -116,6 +136,9 @@ def root():
 
 @app.post("/analyze", response_model=ComplianceResult)
 async def analyze_input(request: AnalysisRequest):
+    if not request.input_text or len(request.input_text.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Input text is required and must be at least 5 characters")
+    
     try:
         result = analyze_compliance(request.input_text, request.analysis_type)
         
@@ -129,12 +152,17 @@ async def analyze_input(request: AnalysisRequest):
         result.confidence_score = 0.85
         
         return result
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/apply-fix")
 def apply_compliance_fix(request: AnalysisRequest):
     """Generate AI-powered compliance fixes using Cerebras + Llama"""
+    if not request.input_text or len(request.input_text.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Input text is required for fix generation")
+    
     try:
         prompt = f"""
         You are CAEPA's policy generator. The following code has compliance violations:
@@ -162,31 +190,47 @@ def apply_compliance_fix(request: AnalysisRequest):
             "status": "FIXED"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Fix generation failed: {str(e)}")
 
 @app.get("/dashboard")
 def get_dashboard_data():
     """Analytics dashboard data"""
-    return {
-        "status_distribution": {"GREEN": 45, "YELLOW": 23, "RED": 12},
-        "top_violations": {
-            "Missing consent mechanism": 8,
-            "Inadequate data encryption": 6,
-            "Insufficient access controls": 4
-        },
-        "compliance_trend": {
-            "2024-01-15": 85.2,
-            "2024-01-16": 78.9,
-            "2024-01-17": 92.1
-        },
-        "total_analyses": 80,
-        "avg_latency": 245
-    }
+    try:
+        return {
+            "status_distribution": {"GREEN": 45, "YELLOW": 23, "RED": 12},
+            "top_violations": {
+                "Missing consent mechanism": 8,
+                "Inadequate data encryption": 6,
+                "Insufficient access controls": 4
+            },
+            "compliance_trend": {
+                "2024-01-15": 85.2,
+                "2024-01-16": 78.9,
+                "2024-01-17": 92.1
+            },
+            "total_analyses": 80,
+            "avg_latency": 245
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Dashboard data unavailable: {str(e)}")
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "service": "CAEPA Real API"}
+    try:
+        # Test API key availability
+        api_key_status = "configured" if os.getenv("CEREBRAS_API_KEY") else "missing"
+        return {
+            "status": "healthy", 
+            "service": "CAEPA Real API",
+            "api_key_status": api_key_status,
+            "timestamp": int(time.time())
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Health check failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
+    # Check for required environment variables
+    if not os.getenv("CEREBRAS_API_KEY"):
+        print("WARNING: CEREBRAS_API_KEY not found in environment")
     uvicorn.run(app, host="0.0.0.0", port=8000)

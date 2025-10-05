@@ -1,7 +1,7 @@
 # 🛡️ CAEPA
 **Context-Aware Ethical Policy Assistant**
 
-> *An AI compliance assistant that gives your code a letter grade and fixes violations instantly using Llama 3 on Cerebras, secured by a Docker MCP Gateway regulatory firewall.*
+> *An AI compliance assistant that gives your code a letter grade and fixes violations instantly using Llama 3 on Cerebras.*
 
 [![Cerebras](https://img.shields.io/badge/Cerebras-Lightning%20Fast-blue?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)](https://cerebras.ai)
 [![Llama](https://img.shields.io/badge/Meta-Llama%203.1-orange?style=for-the-badge&logo=meta)](https://llama.meta.com)
@@ -41,17 +41,17 @@ CAEPA transforms compliance from reactive auditing to proactive governance. Past
 
 **Key Metric:** Sub-second analysis with live latency benchmarking
 
-### 🐳 **Most Creative Use of Docker MCP Gateway ($5,000 Cash)**
-*"Our custom Compliance Interceptor within the MCP Gateway acts as a real-time regulatory firewall. It blocks requests that violate data residency rules BEFORE they reach our AI services, creating an enterprise audit trail for GRC compliance."*
+### 🐳 **Most Creative Use of Docker ($5,000 Cash)**
+*"Our containerized microservices architecture enables specialized compliance analysis per regulation. Each service (GDPR, HIPAA, SOX) runs independently with Docker, allowing horizontal scaling and domain-specific optimization."*
 
-**Key Innovation:** Proactive compliance enforcement, not just detection
+**Key Innovation:** Specialized compliance microservices architecture
 
 ## 🏗️ Technical Architecture
 
 ### **Core Features**
 - 🎓 **Letter Grade Compliance** - A-F scoring with specific violation counts
 - 🚀 **One-Click AI Fixes** - Llama generates corrected policy text
-- 🛡️ **Compliance Firewall** - MCP Gateway blocks violations in real-time
+- 🛡️ **Real-time Analysis** - Instant compliance checking with detailed feedback
 - 📊 **Executive Analytics** - Visual compliance trends and audit trails
 - ⚡ **Sub-Second Analysis** - Cerebras-powered lightning-fast inference
 - 🌍 **Multi-Domain Support** - GDPR, HIPAA, SOX, CCPA coverage
@@ -61,7 +61,7 @@ CAEPA transforms compliance from reactive auditing to proactive governance. Past
 🧠 AI Layer:        Meta Llama 3.1-8B via Cerebras API
 🔧 Backend:         FastAPI + Python 3.11 + Async Processing
 🎨 Frontend:        Streamlit + Plotly + Real-time Updates
-🛡️ Gateway:         Docker MCP + Custom Compliance Interceptor
+🛡️ Deployment:      Docker Compose + Microservices
 📊 Analytics:       Pandas + ChromaDB + Vector Search
 🐳 Deployment:      Docker Compose + Multi-service Architecture
 ```
@@ -69,16 +69,16 @@ CAEPA transforms compliance from reactive auditing to proactive governance. Past
 ### **System Architecture**
 ```
 ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
-│   Frontend  │───▶│ MCP Gateway  │───▶│ Specialized     │
-│  Dashboard  │    │ + Compliance │    │ AI Services     │
-│             │    │ Interceptor  │    │ (GDPR/HIPAA)    │
+│   Frontend  │───▶│ FastAPI      │───▶│ Cerebras API    │
+│  Dashboard  │    │ Backend      │    │ + Llama 3.1     │
+│ (Streamlit) │    │ + Grading    │    │ Inference       │
 └─────────────┘    └──────────────┘    └─────────────────┘
-                           │                      │
-                           ▼                      ▼
-                   ┌──────────────┐    ┌─────────────────┐
-                   │ Audit Trail  │    │ Cerebras API    │
-                   │ & Analytics  │    │ + Llama 3.1     │
-                   └──────────────┘    └─────────────────┘
+                           │                      
+                           ▼                      
+                   ┌──────────────┐            
+                   │ Analytics &  │            
+                   │ Reporting    │            
+                   └──────────────┘            
 ```
 
 ---
@@ -106,7 +106,6 @@ docker-compose up --build
 
 # Access:
 # 🎨 Dashboard: http://localhost:8501
-# 🛡️ Gateway:   http://localhost:9000
 # 🔧 API:       http://localhost:8000
 ```
 
@@ -138,16 +137,7 @@ send_to_third_party(user_email)
 - Grade improves from **F → A+** automatically
 - Show before/after policy text
 
-**3. Compliance Firewall (45 seconds)**
-```
-# Paste dangerous request:
-Transfer US client data to EU without safeguards
-
-# Result: 🚫 BLOCKED by MCP Gateway
-# Compliance Interceptor logs violation
-```
-
-**4. Enterprise Analytics (45 seconds)**
+**3. Enterprise Analytics (45 seconds)**
 - Navigate to dashboard
 - Show compliance trends, violation breakdown
 - Display audit trail from MCP Gateway
@@ -155,8 +145,8 @@ Transfer US client data to EU without safeguards
 ### **Key Demo Talking Points**
 - ⚡ "Sub-second analysis powered by Cerebras"
 - 🧠 "Llama generates actual policy fixes, not just suggestions"
-- 🛡️ "MCP Gateway prevents violations before they happen"
-- 📊 "Enterprise-ready with full audit trails"
+- 🛡️ "Real-time compliance analysis with detailed feedback"
+- 📊 "Enterprise-ready with comprehensive reporting"
 
 ---
 
